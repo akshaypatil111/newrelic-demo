@@ -1,0 +1,91 @@
+pipeline {
+    agent any
+
+    environment {
+        // Set your New Relic license key and any other necessary environment variables here
+        NEW_RELIC_LICENSE_KEY = credentials('new_relic_license_key') // Assuming you've set this in Jenkins credentials
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Checkout the code from your repository
+                git 'https://github.com/your-repo/new-relic-setup.git' // Update this URL
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                script {
+                    // Change directory to where the Terraform configuration is located
+                    dir('terraform') {
+                        sh 'terraform init'
+                    }
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                script {
+                    dir('terraform') {
+                        sh 'terraform apply -auto-approve'
+                    }
+                }
+            }
+        }
+
+        stage('Ansible Setup') {
+            steps {
+                script {
+                    // Ensure you have an inventory file set up for Ansible
+                    dir('ansible') {
+                        sh 'ansible-playbook playbook.yml -i inventory.ini'
+                    }
+                }
+            }
+        }
+
+        stage('Create New Relic Alerts') {
+            steps {
+                script {
+                    // Use curl or a similar tool to create New Relic alerts using the API
+                    sh """
+                    curl -X POST \
+                      'https://api.newrelic.com/v2/alerts_policies.json' \
+                      -H 'X-License-Key: ${NEW_RELIC_LICENSE_KEY}' \
+                      -H 'Content-Type: application/json' \
+                      -d '{
+                            "policy": {
+                              "name": "My Alert Policy",
+                              "condition": {
+                                "name": "CPU Utilization Condition",
+                                "type": "apm_app_metric",
+                                "enabled": true,
+                                "terms": [
+                                  {
+                                    "priority": "critical",
+                                    "threshold": 90,
+                                    "threshold_duration": "5",
+                                    "threshold_occurrences": "AT_LEAST_ONCE",
+                                    "operator": "above"
+                                  }
+                                ]
+                              }
+                            }
+                          }'
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Deployment was successful!'
+        }
+        failure {
+            echo 'Deployment failed. Check the logs for details.'
+        }
+    }
+}

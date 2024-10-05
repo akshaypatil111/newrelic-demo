@@ -1,0 +1,14 @@
+---
+- name: Install New Relic Infrastructure and Logs
+  hosts: all
+  become: true
+  roles:
+    - role: newrelic.newrelic_install  # Using the official New Relic role
+  vars:
+    targets:
+      - infrastructure
+      - logs  # Installing both infrastructure monitoring and logs
+  environment:
+    NEW_RELIC_API_KEY: "NRAK-UZEIDQ0STGGH1P4D94UXD64AX6C"  # Replace with your actual API key
+    NEW_RELIC_ACCOUNT_ID: "4564267"  # Your New Relic Account ID
+    NEW_RELIC_REGION: "US"  # New Relic region (e.g., US or EU)
